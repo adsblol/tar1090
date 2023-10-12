@@ -2378,7 +2378,6 @@ function webglAddLayer() {
 
 function webglInit() {
     let init = true;
-
     new Toggle({
         key: "webgl",
         display: "WebGL",
