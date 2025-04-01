@@ -1,3 +1,5 @@
+.PHONY: update
+
 update:
 	git fetch -a upstream
 	git rebase upstream/master
