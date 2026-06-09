@@ -972,3 +972,124 @@ input{
 .ui-widget, .ui-widget input, .ui-widget select, .ui-widget textarea, .ui-widget button {
     font-family: 'B612', Arial,Helvetica,sans-serif !important;
 }
+
+/* Donation banner styles */
+#donation-banner {
+    width: 100%;
+    background: #ffffff;
+    color: black;
+    text-align: center;
+    font-family: "B612", "Helvetica Neue", Helvetica, Verdana, sans-serif;
+    padding: calc(10px * var(--SCALE)) 0;
+    border-bottom: calc(1px * var(--SCALE)) solid #e8d9a0;
+    box-sizing: border-box;
+    position: relative;
+    font-size: var(--FS2);
+    line-height: 1.4;
+    display: none;
+}
+
+#donation-banner.visible {
+    display: block;
+}
+
+#donation-banner .donation-banner-content {
+    max-width: 50%;
+    margin: 0 auto;
+    padding: 0 calc(36px * var(--SCALE));
+}
+
+@media (max-width: 768px) {
+    #donation-banner .donation-banner-content {
+        max-width: 100%;
+        padding: 0 calc(12px * var(--SCALE));
+    }
+    #donation-banner {
+        font-size: var(--FS1);
+    }
+}
+
+#donation-banner a {
+    color: #d32f2f;
+    text-decoration: underline;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+#donation-banner a:hover {
+    color: #b71c1c;
+}
+
+#donation-banner .banner-close {
+    position: absolute;
+    right: calc(10px * var(--SCALE));
+    top: calc(10px * var(--SCALE));
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid #ccc;
+    border-radius: calc(4px * var(--SCALE));
+    color: #555;
+    cursor: pointer;
+    font-size: calc(18px * var(--SCALE));
+    font-weight: bold;
+    padding: 0;
+    width: calc(28px * var(--SCALE));
+    height: calc(28px * var(--SCALE));
+    font-family: "B612", "Helvetica Neue", Helvetica, Verdana, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#donation-banner .banner-close:hover {
+    background: rgba(0, 0, 0, 0.1);
+    color: #333;
+    border-color: #999;
+}
+
+#donation-banner.fading-out {
+    opacity: 0;
+    transition: opacity 0.8s ease-out;
+    pointer-events: none;
+}
+
+.addy-toggle {
+    display: inline-block;
+}
+
+.addy-toggle:hover {
+    text-decoration: underline;
+}
+
+.addy-panel {
+    display: none;
+    margin-top: calc(6px * var(--SCALE));
+    background: #fff3cd;
+    border-radius: calc(4px * var(--SCALE));
+    padding: calc(6px * var(--SCALE)) calc(10px * var(--SCALE));
+    font-family: 'B612 Mono', monospace;
+    font-size: calc(11px * var(--SCALE));
+    color: #888;
+    word-break: break-all;
+    text-align: center;
+}
+
+.addy-address {
+    color: #333;
+}
+
+.addy-copy-btn {
+    background: transparent;
+    border: calc(1px * var(--SCALE)) solid #ddc;
+    color: #b45309;
+    cursor: pointer;
+    font-size: calc(11px * var(--SCALE));
+    font-family: 'B612', sans-serif;
+    border-radius: calc(3px * var(--SCALE));
+    padding: calc(1px * var(--SCALE)) calc(6px * var(--SCALE));
+    margin-left: calc(4px * var(--SCALE));
+}
+
+.addy-copy-btn:hover {
+    background: rgba(180, 83, 9, 0.1);
+}
