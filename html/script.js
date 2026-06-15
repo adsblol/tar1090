@@ -1853,74 +1853,6 @@ jQuery('#selected_altitude_geom1')
         showHideButtons();
         runAfterLoad(showHideButtons);
     }
-
-    initDonationBanner();
-}
-
-function initDonationBanner() {
-    const banner = document.getElementById('donation-banner');
-    if (!banner) return;
-
-    if (getCookie('donationBannerClosed') === 'true') {
-        banner.remove();
-        return;
-    }
-
-    banner.classList.add('visible');
-
-    const closeBtn = banner.querySelector('.banner-close');
-    if (closeBtn) {
-        closeBtn.addEventListener('click', function() {
-            setCookie('donationBannerClosed', 'true', 365);
-
-            banner.classList.add('fading-out');
-
-            setTimeout(function() {
-                banner.remove();
-            }, 800);
-        });
-    }
-
-    const toggles = banner.querySelectorAll('.addy-toggle');
-    toggles.forEach(function(toggle) {
-        toggle.addEventListener('click', function(e) {
-            e.preventDefault();
-            const targetId = this.getAttribute('data-target');
-            const targetPanel = document.getElementById(targetId);
-            const otherPanel = targetPanel === document.getElementById('btc-panel')
-                ? document.getElementById('xmr-panel')
-                : document.getElementById('btc-panel');
-
-            if (targetPanel.style.display === 'block') {
-                targetPanel.style.display = 'none';
-            } else {
-                targetPanel.style.display = 'block';
-            }
-
-            if (otherPanel) {
-                otherPanel.style.display = 'none';
-            }
-        });
-    });
-
-    const copyBtns = banner.querySelectorAll('.addy-copy-btn');
-    copyBtns.forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            const targetId = this.getAttribute('data-copy-target');
-            const addressEl = document.getElementById(targetId);
-            if (addressEl) {
-                navigator.clipboard.writeText(addressEl.textContent).then(function() {
-                    const originalText = btn.textContent;
-                    btn.textContent = 'copied!';
-                    setTimeout(function() {
-                        btn.textContent = originalText;
-                    }, 1500);
-                }).catch(function() {
-                    console.error('Clipboard API not supported');
-                });
-            }
-        });
-    });
 }
 
 function initLegend(colors) {
@@ -8770,7 +8702,7 @@ function setAutoselect() {
     autoSelectClosest();
 }
 function registrationLink(plane) {
-
+    
     const countryLinks = {
         Brazil: (reg) => `https://sistemas.anac.gov.br/aeronaves/cons_rab_resposta_en.asp?textMarca=${reg}`,
         Australia: (reg) => `https://www.casa.gov.au/search-centre/aircraft-register?reg=${reg.replace(/^VH-/, '')}`,
