@@ -6,9 +6,9 @@
     --FS1: calc( 10px * var(--SCALE));
     --FS2: calc( 13px * var(--SCALE));
     --FS3: calc( 17px * var(--SCALE));
-    --TXTCOLOR1: #003f4b;
-    --TXTCOLOR2: #050505;
-    --TXTCOLOR3: #101010;
+    --TXTCOLOR1: #ffeeff;
+    --TXTCOLOR2: #eee0ee;
+    --TXTCOLOR3: #bbb0bb;
 }
 
 html, body {
