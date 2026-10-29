@@ -362,7 +362,90 @@ function processReceiverUpdate(data, init) {
         processAircraft(data.aircraft[j], init, uat);
     }
 }
-function fetchFail(jqxhr, status, error) {
+
+// re-api proof of work: solve the 403 "Verification" challenge in a worker (an XHR never runs that page)
+
+const apiWorkerSrc = `
+const K=new Uint32Array([0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2]),W=new Uint32Array(64);
+function c(h,d,o){
+ for(let i=0;i<16;i++)W[i]=d[o+i*4]<<24|d[o+i*4+1]<<16|d[o+i*4+2]<<8|d[o+i*4+3];
+ for(let i=16;i<64;i++){const a=W[i-15],b=W[i-2];W[i]=(W[i-16]+(((a>>>7)|(a<<25))^((a>>>18)|(a<<14))^(a>>>3))+W[i-7]+(((b>>>17)|(b<<15))^((b>>>19)|(b<<13))^(b>>>10)))|0}
+ let a=h[0],b=h[1],cc=h[2],dd=h[3],e=h[4],f=h[5],g=h[6],x=h[7];
+ for(let i=0;i<64;i++){const t1=(x+(((e>>>6)|(e<<26))^((e>>>11)|(e<<21))^((e>>>25)|(e<<7)))+((e&f)^(~e&g))+K[i]+W[i])|0,t2=((((a>>>2)|(a<<30))^((a>>>13)|(a<<19))^((a>>>22)|(a<<10)))+((a&b)^(a&cc)^(b&cc)))|0;x=g;g=f;f=e;e=(dd+t1)|0;dd=cc;cc=b;b=a;a=(t1+t2)|0}
+ h[0]=(h[0]+a)|0;h[1]=(h[1]+b)|0;h[2]=(h[2]+cc)|0;h[3]=(h[3]+dd)|0;h[4]=(h[4]+e)|0;h[5]=(h[5]+f)|0;h[6]=(h[6]+g)|0;h[7]=(h[7]+x)|0;
+}
+function z(h,n){const w=n>>>5;for(let i=0;i<w;i++)if(h[i])return 0;return !(n&31)||!(h[w]>>>(32-(n&31)))}
+onmessage=e=>{
+ const p=e.data.payload,d=e.data.diff|0,l=p.length,m=l+8,s=(l>>6)<<6,n=((m+72)>>>6<<6)-s,t=new Uint8Array(n),v=new DataView(t.buffer),h=new Uint32Array(8),mid=new Uint32Array([0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19]),o=l-s;
+ t.set(p.subarray(s,l));t[m-s]=128;v.setUint32(n-4,m*8);
+ for(let i=0;i<s;i+=64)c(mid,p,i);
+ for(let i=0;i<2**(d+3);i++){
+  v.setUint32(o,Math.floor(i/4294967296));v.setUint32(o+4,i>>>0);h.set(mid);
+  for(let j=0;j<n;j+=64)c(h,t,j);
+  if(z(h,d))return postMessage({nonce:i});
+ }
+ postMessage({error:'no solution'});
+};
+`;
+
+let apiSolve = null, apiTries = 0, apiLast = 0;
+
+function apiDetected(jqxhr, url) {
+    if (!jqxhr || jqxhr.status != 403 || !url || url.indexOf('re-api/') == -1) return false;
+    const body = jqxhr.responseText || '';
+    return body ? body.indexOf('<title>Verification</title>') != -1 : !!getCookie('challenge');
+}
+
+const apiMsg = text => jQuery("#update_error_detail").text(text).parent().css("display", text ? "block" : "none");
+
+function apiRetry(url) {
+    if (apiSolve) return apiSolve;
+    const now = Date.now();
+    if (now - apiLast > 120000) apiTries = 0;
+    apiLast = now;
+    if (apiTries++ >= 3) return apiMsg('Verification failed, reload the page to retry.');
+    apiMsg('Verifying connection (proof of work)...');
+    return apiSolve = (async () => {
+        for (let attempt = 0; attempt < 2; attempt++) {
+            await new Promise(r => setTimeout(r, 100)); // let in-flight 403s settle on the latest challenge
+            const raw = getCookie('challenge');
+            if (!raw) throw new Error('challenge cookie missing (HTTPS + cookie passthrough required)');
+            let b64 = raw.replace(/-/g, '+').replace(/_/g, '/');
+            while (b64.length % 4) b64 += '=';
+            const payload = Uint8Array.from(atob(b64), ch => ch.charCodeAt(0));
+            const meta = JSON.parse(new TextDecoder().decode(payload));
+            const nonce = await new Promise((resolve, reject) => {
+                const blob = URL.createObjectURL(new Blob([apiWorkerSrc], {type: 'text/javascript'})),
+                      worker = new Worker(blob),
+                      end = (err, n) => {
+                          clearTimeout(timer);
+                          worker.terminate();
+                          URL.revokeObjectURL(blob);
+                          err ? reject(err) : resolve(n);
+                      },
+                      timer = setTimeout(() => end(new Error('timed out')), 55000);
+                worker.onmessage = ev => end(ev.data.error ? new Error(ev.data.error) : null, ev.data.nonce);
+                worker.onerror = ev => end(new Error(ev.message || 'worker error'));
+                worker.postMessage({payload: payload, diff: +meta.diff || 18});
+            });
+            if (getCookie('challenge') != raw) continue;
+            document.cookie = `challenge-nonce=${nonce}; Path=/; Max-Age=60; SameSite=Lax`;
+            await fetch(url || 're-api/?json', {credentials: 'same-origin', cache: 'no-store', headers: {accept: 'text/html'}});
+            apiSolve = null;
+            apiMsg('');
+            lastFetch = 0;
+            fetchData({force: true});
+            return;
+        }
+        throw new Error('challenge changed while solving');
+    })().catch(e => {
+        apiSolve = null;
+        apiMsg('Verification failed: ' + (e.message || e));
+        setTimeout(fetchData, 2000);
+    });
+}
+
+function fetchFail(jqxhr, status, error, url) {
     try {
         pendingFetches--;
         if (pendingFetches <= 0 && !tabHidden) {
@@ -370,6 +453,8 @@ function fetchFail(jqxhr, status, error) {
             checkMovement();
         }
         status = jqxhr.status;
+        if (apiDetected(jqxhr, url)) { apiRetry(url); return; }
+        if (Number(status) === 207 && url && url.indexOf('re-api/') !== -1) return;
         if (jqxhr.readyState == 0) error = "Can't connect to server, check your network!";
         let errText = status + (error ? (": " + error) : "");
         console.log(jqxhr);
@@ -428,6 +513,9 @@ function fetchDone(data) {
             }
             return;
         }
+
+        // data is flowing again, allow future proof of work attempts
+        apiTries = 0;
 
         if (!timersActive) {
             //console.log(localTime(new Date()) + " fetchDone: not applying data due to !timersActive");
@@ -626,6 +714,7 @@ function fetchData(options) {
     if (heatmap || replay || showTrace || pTracks || !loadFinished || inhibitFetch) {
         return;
     }
+    if (apiSolve) return; // don't stack up requests (and new challenge cookies) while solving
     let currentTime = new Date().getTime();
     const refreshMs = refreshInt()
     g.lastRefreshInt = refreshMs;
@@ -799,7 +888,7 @@ function fetchData(options) {
 
         req
             .done(fetchDone)
-            .fail(fetchFail);
+            .fail((jqxhr, status, error) => fetchFail(jqxhr, status, error, ac_url[i]));
     }
 
 
